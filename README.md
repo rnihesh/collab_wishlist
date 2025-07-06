@@ -9,6 +9,9 @@
 A modern React 19 wishlist management application featuring Tailwind CSS, Clerk authentication, and a responsive UI with dark/light mode. Integrates with an Express.js backend.
 
 ---
+[![Watch the video](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
+
+---
 
 ## ⚙️ Setup Instructions
 
