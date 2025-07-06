@@ -28,15 +28,11 @@ userApp.get(
 userApp.post(
   "/wish",
   expressAsyncHandler(async (req, res) => {
-    const { name, baseId, listName } = req.body;
-    if (!name || !baseId || !listName) {
+    const { name, baseId, listName, imageUrl, price } = req.body;
+    if (!name || !baseId || !listName || !imageUrl || !price) {
       return res.send({ message: "data insufficient" });
     }
     try {
-      const product = await Product.findOne({ name });
-      if (!product) {
-        return res.send({ message: "Product not found" });
-      }
       const user = await User.findById(baseId);
       if (!user) {
         return res.send({ message: "User not found" });
@@ -53,7 +49,7 @@ userApp.post(
       }
 
       wishlist.list.push({
-        product: product.toObject(),
+        product: { name, imageUrl, price },
         emoji: [],
         comment: [],
       });
@@ -209,6 +205,7 @@ userApp.post(
     const { comment, email, name, pName, userName } = req.body;
     // name = wishlist name, pName = product name, userName = name of commenter
     if (!email || !name || !comment || !pName) {
+      console.log(email, name, comment, pName);
       return res.send({ message: "data insufficient" });
     }
     try {
@@ -236,6 +233,152 @@ userApp.post(
       });
       await user.save();
       res.send({ message: "Comment added", payload: user });
+    } catch (e) {
+      console.log("error: ", e);
+      res.send({ message: "error", error: e });
+    }
+  })
+);
+
+userApp.post(
+  "/createwishlist",
+  expressAsyncHandler(async (req, res) => {
+    console.log("[CreateWishlist] Request body:", req.body);
+    const { baseId, wName } = req.body;
+    if (!baseId || !wName) {
+      return res.status(400).send({ message: "Missing baseId or wName" });
+    }
+    try {
+      const user = await User.findById(baseId);
+      console.log("[CreateWishlist] User found:", user);
+      if (!user) {
+        return res.status(404).send({ message: "User not found" });
+      }
+      let wishlist = user.wishlist.find((wl) => wl.wName === wName);
+      if (wishlist) {
+        return res.status(400).send({ message: "Wishlist already exists" });
+      }
+      user.wishlist.push({ wName, list: [], hasAccessTo: [] });
+      await user.save();
+      console.log("[CreateWishlist] Wishlist created and user saved:", user);
+      res.status(201).send({ message: "Wishlist created", payload: user });
+    } catch (e) {
+      console.error("[CreateWishlist] Error:", e);
+      res
+        .status(500)
+        .send({ message: "Internal server error", error: e.message });
+    }
+  })
+);
+
+userApp.post(
+  "/editwishitem",
+  expressAsyncHandler(async (req, res) => {
+    const { email, wName, oldName, name, imageUrl, price, newWName } = req.body;
+    if (!email || !wName || !oldName || !name || !imageUrl || !price) {
+      return res.send({ message: "data insufficient" });
+    }
+    try {
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.send({ message: "User not found" });
+      }
+      let wishlist = user.wishlist.find((wl) => wl.wName === wName);
+      if (!wishlist) {
+        return res.send({ message: "Wishlist not found" });
+      }
+      const itemIndex = wishlist.list.findIndex(
+        (item) => item.product && item.product.name === oldName
+      );
+      if (itemIndex === -1) {
+        return res.send({ message: "Product not found in wishlist" });
+      }
+      // If newWName is provided and different, move the item
+      if (newWName && newWName !== wName) {
+        // Remove from old wishlist
+        const [item] = wishlist.list.splice(itemIndex, 1);
+        // Update product fields
+        item.product.name = name;
+        item.product.imageUrl = imageUrl;
+        item.product.price = price;
+        // Find or create new wishlist
+        let newWishlist = user.wishlist.find((wl) => wl.wName === newWName);
+        if (!newWishlist) {
+          newWishlist = { wName: newWName, list: [] };
+          user.wishlist.push(newWishlist);
+        }
+        newWishlist.list.push(item);
+      } else {
+        // Just update in place
+        const item = wishlist.list[itemIndex];
+        item.product.name = name;
+        item.product.imageUrl = imageUrl;
+        item.product.price = price;
+      }
+      await user.save();
+      res.send({ message: "Wishlist item updated", payload: user });
+    } catch (e) {
+      console.log("error: ", e);
+      res.send({ message: "error", error: e });
+    }
+  })
+);
+
+userApp.post(
+  "/renamewishlist",
+  expressAsyncHandler(async (req, res) => {
+    const { email, oldName, newName } = req.body;
+    if (!email || !oldName || !newName) {
+      return res.send({ message: "data insufficient" });
+    }
+    try {
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.send({ message: "User not found" });
+      }
+      if (oldName === newName) {
+        return res.send({ message: "New name must be different" });
+      }
+      let oldWishlistIdx = user.wishlist.findIndex(
+        (wl) => wl.wName === oldName
+      );
+      if (oldWishlistIdx === -1) {
+        return res.send({ message: "Old wishlist not found" });
+      }
+      if (user.wishlist.some((wl) => wl.wName === newName)) {
+        return res.send({
+          message: "A wishlist with the new name already exists",
+        });
+      }
+      // Move all items and sharing info, deep clone and remove createdAt/updatedAt
+      const oldWishlist = user.wishlist[oldWishlistIdx];
+      const cleanList = (oldWishlist.list || []).map((item) => {
+        const newItem = JSON.parse(JSON.stringify(item));
+        if (newItem.product) {
+          delete newItem.product.createdAt;
+          delete newItem.product.updatedAt;
+        }
+        delete newItem.createdAt;
+        delete newItem.updatedAt;
+        if (Array.isArray(newItem.comment)) {
+          newItem.comment = newItem.comment.map((c) => {
+            const nc = { ...c };
+            delete nc.createdAt;
+            delete nc.updatedAt;
+            return nc;
+          });
+        }
+        return newItem;
+      });
+      const newWishlist = {
+        wName: newName,
+        list: cleanList,
+        hasAccessTo: oldWishlist.hasAccessTo || [],
+      };
+      user.wishlist.splice(oldWishlistIdx, 1); // Remove old
+      user.wishlist.push(newWishlist); // Add new
+      await user.save();
+      res.send({ message: "Wishlist renamed", payload: user });
     } catch (e) {
       console.log("error: ", e);
       res.send({ message: "error", error: e });

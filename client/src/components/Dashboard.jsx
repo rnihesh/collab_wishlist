@@ -3,9 +3,15 @@ import { useUser } from "@clerk/clerk-react";
 import WishlistCard from "./WishlistCard";
 import CreateWishlistModal from "./CreateWishlistModal";
 import { getBaseUrl } from "../utils/config";
+import { useBackendUserId } from "../utils/useBackendUserId";
 
 function Dashboard() {
   const { user } = useUser();
+  const {
+    backendUserId,
+    loading: backendUserLoading,
+    error: backendUserError,
+  } = useBackendUserId();
   const [wishlists, setWishlists] = useState([]);
   const [sharedWishlists, setSharedWishlists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,9 +30,11 @@ function Dashboard() {
     try {
       setLoading(true);
       const email = user.emailAddresses[0].emailAddress;
+      console.log("[FetchWishlists] Fetching wishlists for email:", email);
       const response = await fetch(`${API_BASE_URL}/user/getwish/${email}`);
+      console.log("[FetchWishlists] Response received", response);
       const data = await response.json();
-
+      console.log("[FetchWishlists] Response JSON", data);
       if (response.ok) {
         setWishlists(data.ownWishlists || []);
         setSharedWishlists(data.sharedWishlists || []);
@@ -35,6 +43,7 @@ function Dashboard() {
       }
     } catch (err) {
       setError("Network error. Please try again.");
+      console.error("[FetchWishlists] Error:", err);
     } finally {
       setLoading(false);
     }
@@ -42,19 +51,44 @@ function Dashboard() {
 
   const handleCreateWishlist = async (wishlistName) => {
     try {
-      // For now, we'll just add it locally since the backend expects a user ID
-      // In a real app, you'd need to sync the Clerk user with your backend user
-      const newWishlist = {
-        wName: wishlistName,
-        list: [],
-        hasAccessTo: [],
-      };
-      setWishlists((prev) => [...prev, newWishlist]);
+      if (!backendUserId) {
+        alert("User info not ready. Please try again in a moment.");
+        return;
+      }
+      console.log(
+        "[CreateWishlist] Sending POST to /createwishlist to create wishlist",
+        wishlistName,
+        backendUserId
+      );
+      const response = await fetch(`${API_BASE_URL}/user/createwishlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          baseId: backendUserId,
+          wName: wishlistName,
+        }),
+      });
+      console.log("[CreateWishlist] Response received", response);
+      const data = await response.json();
+      console.log("[CreateWishlist] Response JSON", data);
+      if (!response.ok) {
+        setError(data.message || "Failed to create wishlist.");
+        return;
+      }
+      await fetchWishlists();
       setShowCreateModal(false);
     } catch (err) {
       setError("Failed to create wishlist");
+      console.error("[CreateWishlist] Error:", err);
     }
   };
+
+  if (backendUserLoading) {
+    return <div>Loading user info...</div>;
+  }
+  if (backendUserError) {
+    return <div>Error loading user info: {backendUserError}</div>;
+  }
 
   if (loading) {
     return (
@@ -112,9 +146,12 @@ function Dashboard() {
           </button>
         </div>
 
-        {/* My Wishlists */}
+        {/* My Wishlists Section */}
         <div className="mb-12">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+            <span role="img" aria-label="My Lists">
+              📝
+            </span>{" "}
             My Wishlists
           </h2>
           {wishlists.length === 0 ? (
@@ -146,16 +183,22 @@ function Dashboard() {
                   wishlist={wishlist}
                   isOwner={true}
                   onUpdate={fetchWishlists}
+                  showPrice={true}
+                  showEmoji={true}
+                  showComment={true}
                 />
               ))}
             </div>
           )}
         </div>
 
-        {/* Shared Wishlists */}
+        {/* Shared Wishlists Section */}
         {sharedWishlists.length > 0 && (
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+              <span role="img" aria-label="Shared">
+                🤝
+              </span>{" "}
               Shared with Me
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -165,6 +208,9 @@ function Dashboard() {
                   wishlist={wishlist}
                   isOwner={false}
                   onUpdate={fetchWishlists}
+                  showPrice={true}
+                  showEmoji={true}
+                  showComment={true}
                 />
               ))}
             </div>

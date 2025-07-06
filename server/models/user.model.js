@@ -60,6 +60,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    imageUrl:{
+      type: String,
+    },
     wishlist: {
       type: [wishlistSchema],
     },

@@ -7,3 +7,9 @@ export const getBaseUrl = () => {
     ? "http://localhost:3000"
     : `${import.meta.env.VITE_RENDER_URL}`; // Backend URL on Render
 };
+
+export const getApiBaseUrl = () => {
+  return isDevelopment
+    ? "http://localhost:3000"
+    : `${import.meta.env.VITE_RENDER_URL}`;
+};

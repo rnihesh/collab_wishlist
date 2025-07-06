@@ -17,7 +17,7 @@ async function createUser(req, res) {
     const userDoc = await new User(newUser).save();
 
     return res.status(201).send({
-      message: userDoc.firstName,
+      message: userDoc.name,
       payload: userDoc,
     });
   } catch (err) {
