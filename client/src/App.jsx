@@ -14,6 +14,7 @@ import LandingPage from "./components/LandingPage";
 import Signin from "./components/auth/SignIn";
 import Signup from "./components/auth/SignUp";
 import "./App.css";
+import Footer from "./components/common/Footer";
 
 // You'll need to add your Clerk publishable key to environment variables
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -50,6 +51,7 @@ function App() {
                 />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              <Footer/>
             </SignedIn>
 
             <SignedOut>
@@ -59,6 +61,7 @@ function App() {
                 <Route path="/signup" element={<Signup />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              <Footer/>
             </SignedOut>
           </div>
         </Router>

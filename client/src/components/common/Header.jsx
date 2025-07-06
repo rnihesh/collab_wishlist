@@ -24,7 +24,7 @@ function Header() {
           {/* Logo */}
           <div className="flex items-center">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              Wishlist App
+              WishyL
             </h1>
           </div>
 
