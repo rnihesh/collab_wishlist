@@ -97,6 +97,40 @@ src/
 │   ├── config.js
 │   └── useBackendUserId.js
 ```
+---
+
+## 🔗 Backend Integration
+
+Connects to your Express.js backend at `http://localhost:4000`. Required endpoints:
+
+| Endpoint               | Method | Description               |
+| ---------------------- | ------ | ------------------------- |
+| `/user/user`           | POST   | Create/login a user       |
+| `/user/getwish/:email` | GET    | Retrieve user's wishlists |
+| `/user/wish`           | POST   | Add an item to a wishlist |
+| `/user/share`          | POST   | Share a wishlist          |
+| `/user/renamewishlist` | POST   | Rename a wishlist         |
+| `/user/editwishitem`   | POST   | Edit a product            |
+| `/user/emoji`          | POST   | React with emoji to a product|
+| `/user/comment`        | POST   | Comment a product         |
+
+Ensure the backend is running with the following structure:
+
+```bash
+Backend/
+├── APIs/
+│   ├── createUser.js
+│   └── userApi.js
+├── models/
+│   ├── product.model.js
+│   └── user.model.js
+├── server.js
+├── package.json
+└── package-lock.json
+```
+
+---
+
 
 ---
 
@@ -117,4 +151,6 @@ src/
 Feel free to reach out for bugs, improvements, or collaboration!
 
 ---
+
+
 
